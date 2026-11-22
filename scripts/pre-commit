@@ -1,0 +1,18 @@
+#!/bin/sh
+# Git pre-commit hook: block the commit if leakscan finds a secret.
+# Install:  cp scripts/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
+#
+# Note: this scans the working tree. A production hook would scan only the staged
+# content (git diff --cached) to stay fast on large repositories.
+
+if ! command -v leakscan >/dev/null 2>&1; then
+  echo "leakscan not found in PATH: go install ./cmd/leakscan" >&2
+  exit 1
+fi
+
+leakscan scan --fail-on medium .
+status=$?
+if [ $status -eq 1 ]; then
+  echo "Commit blocked: possible secrets found. Remove them, or mark a reviewed line with 'leakscan:ignore'." >&2
+fi
+exit $status

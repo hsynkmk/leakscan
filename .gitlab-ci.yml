@@ -1,0 +1,51 @@
+# The same pipeline for GitLab, plus GitLab's built-in security analyzers.
+stages: [test, security, build]
+
+include:
+  - template: Jobs/SAST.gitlab-ci.yml
+  - template: Jobs/Secret-Detection.gitlab-ci.yml
+
+variables:
+  GO_IMAGE: golang:1.23
+
+go-test:
+  stage: test
+  image: $GO_IMAGE
+  script:
+    - test -z "$(gofmt -l .)"
+    - go vet ./...
+    - go test -race -cover ./...
+
+web-build:
+  stage: test
+  image: node:22-alpine
+  script:
+    - cd web
+    - npm ci --no-audit --no-fund
+    - npm run build
+
+govulncheck:
+  stage: security
+  image: $GO_IMAGE
+  script:
+    - go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+
+leakscan-self-scan:
+  stage: security
+  image: $GO_IMAGE
+  script:
+    # Exit code 1 (findings) or 2 (incomplete scan) fails the pipeline.
+    - go run ./cmd/leakscan scan --fail-on low .
+    - go run ./cmd/leakscan scan --format sarif . > leakscan.sarif
+  artifacts:
+    when: always
+    paths: [leakscan.sarif]
+
+docker-build:
+  stage: build
+  image: docker:27
+  services: [docker:27-dind]
+  script:
+    - docker build -t leakscan .
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
