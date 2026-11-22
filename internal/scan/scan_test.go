@@ -29,6 +29,9 @@ func TestDirFindsDemoSecrets(t *testing.T) {
 		"slack-token":       1,
 		"jwt":               1,
 		"private-key":       1,
+
+		"connection-string-password": 1,
+		"url-credentials":            1,
 	}
 	got := map[string]int{}
 	for _, f := range res.Findings {
@@ -42,8 +45,8 @@ func TestDirFindsDemoSecrets(t *testing.T) {
 			t.Errorf("rule %s: got %d findings, want %d (all: %v)", rule, got[rule], n, got)
 		}
 	}
-	if len(res.Findings) != 7 {
-		t.Errorf("total findings = %d, want 7", len(res.Findings))
+	if len(res.Findings) != 9 {
+		t.Errorf("total findings = %d, want 9", len(res.Findings))
 	}
 	if res.FilesSkipped != 1 { // the binary file; node_modules is never walked
 		t.Errorf("files skipped = %d, want 1", res.FilesSkipped)

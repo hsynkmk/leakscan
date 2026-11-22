@@ -35,6 +35,8 @@ var (
 	SlackToken  = "xo" + "xb-" + fake(4, 24, alnum)
 	JWT         = "ey" + "J" + fake(5, 20, alnum) + ".ey" + "J" + fake(6, 24, alnum) + "." + fake(7, 32, alnum)
 	DBPassword  = fake(8, 18, alnum+"!#%")
+	ConnPwd     = fake(10, 12, alnum)
+	URLPassword = fake(11, 16, alnum)
 	KeyHeader   = "-----BEGIN " + "RSA PRIVATE KEY-----"
 )
 
@@ -65,6 +67,19 @@ func Files() map[string]string {
 		"src/client.ts": strings.Join([]string{
 			`const session = "` + JWT + `"`,
 			`const reviewed = "` + GitHubToken + `" // leakscan:ignore  (test fixture, reviewed)`,
+			"",
+		}, "\n"),
+		"src/Data/Db.cs": strings.Join([]string{
+			"public static class Db {",
+			`    public static SqlConnection Conn = new SqlConnection("data source=sql.internal;user id=app;pwd=` + ConnPwd + `;initial catalog=Shop");`,
+			"}",
+			"",
+		}, "\n"),
+		"docker-compose.yml": strings.Join([]string{
+			"services:",
+			"  api:",
+			"    environment:",
+			"      DATABASE_URL: postgres://app:" + URLPassword + "@db:5432/app",
 			"",
 		}, "\n"),
 		"keys/deploy_key": KeyHeader + "\n" + fake(9, 64, alnum) + "\n",

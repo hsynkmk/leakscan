@@ -22,6 +22,10 @@ func TestScanLine(t *testing.T) {
 		{"private key", demo.KeyHeader, "private-key"},
 		{"generic password", `password: "` + demo.DBPassword + `"`, "generic-secret"},
 		{"prefixed name", `db_password = "` + demo.DBPassword + `"`, "generic-secret"},
+		// Regression: ADO.NET connection string hardcoded in C# (missed by the first version).
+		{"connection string pwd", `new SqlConnection("data source=x.example.org;user id=app;pwd=` + demo.ConnPwd + `;initial catalog=Db")`, "connection-string-password"},
+		{"connection string Password", `"Default": "Server=db;Database=Shop;User Id=sa;Password=` + demo.ConnPwd + `;"`, "connection-string-password"},
+		{"url credentials", "DATABASE_URL=postgres://app:" + demo.URLPassword + "@db:5432/app", "url-credentials"},
 
 		// False-positive controls.
 		{"placeholder", `password = "changeme123"`, ""},
@@ -31,6 +35,11 @@ func TestScanLine(t *testing.T) {
 		{"template variable", `password = "${DB_PASSWORD}"`, ""},
 		{"inline ignore", "t = " + demo.GitHubToken + " // leakscan:ignore", ""},
 		{"plain code", "for i := 0; i < n; i++ {", ""},
+		{"pwd outside a connection string", "pwd=/home/user/project", ""},
+		{"connection string from env", `"Server=db;User Id=sa;Password=${DB_PASSWORD};"`, ""},
+		{"url without credentials", "https://github.com/owner/repo", ""},
+		{"url with username only", "ssh://git@github.com/owner/repo", ""},
+		{"url with dummy password", "https://user:pass@github.com/owner/repo", ""},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

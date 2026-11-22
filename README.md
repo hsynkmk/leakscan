@@ -68,7 +68,7 @@ flowchart LR
 
 ## Design decisions
 
-**Signal quality over volume.** A scanner that cries wolf gets ignored or bypassed. Specific rules (AWS, GitHub, GitLab, Slack, private keys, JWT) are high-confidence. The generic `password = "..."` rule is gated by **Shannon entropy**, and known placeholders (`changeme`, `example`, `${VAR}`) are ignored. A reviewed line can be suppressed explicitly with an inline `leakscan:ignore` comment, which stays visible in code review.
+**Signal quality over volume.** A scanner that cries wolf gets ignored or bypassed. Specific rules (AWS, GitHub, GitLab, Slack, private keys, JWT) are high-confidence. Database credentials are caught in **connection strings** (`Server=…;Password=…`) and **URLs** (`postgres://user:pass@host`); the connection-string rule only fires when the line really looks like a connection string (context match). The generic `password = "..."` rule is gated by **Shannon entropy**, and known placeholders (`changeme`, `example`, `${VAR}`, dummy values like `pass`) are ignored. A reviewed line can be suppressed explicitly with an inline `leakscan:ignore` comment, which stays visible in code review.
 
 **The secret is never stored.** Findings carry a masked value (`ghp_********`) and a fingerprint. The raw secret is never logged, printed or returned by the API; tests assert this.
 

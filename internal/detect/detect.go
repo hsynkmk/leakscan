@@ -32,6 +32,9 @@ type Finding struct {
 // placeholders are values that look like secrets but are documentation or test data.
 var placeholders = []string{"example", "changeme", "placeholder", "dummy", "xxxxxxxx", "your_", "your-", "<", "${", "{{"}
 
+// dummyValues are whole values commonly used in docs and tests, e.g. https://user:pass@host.
+var dummyValues = map[string]bool{"pass": true, "password": true, "passwd": true, "secret": true, "token": true, "test": true}
+
 // Detector applies a rule set to text. It is safe for concurrent use:
 // it holds no mutable state and regexp.Regexp is goroutine-safe.
 type Detector struct {
@@ -71,6 +74,9 @@ func (d *Detector) ScanLine(file string, lineNo int, line string) []Finding {
 	}
 	var out []Finding
 	for _, rule := range d.rules {
+		if rule.Context != nil && !rule.Context.MatchString(line) {
+			continue
+		}
 		for _, m := range rule.Pattern.FindAllStringSubmatchIndex(line, -1) {
 			start, end := m[2*rule.SecretGroup], m[2*rule.SecretGroup+1]
 			if start < 0 {
@@ -100,6 +106,9 @@ func (d *Detector) ScanLine(file string, lineNo int, line string) []Finding {
 
 func isPlaceholder(s string) bool {
 	lower := strings.ToLower(s)
+	if dummyValues[lower] {
+		return true
+	}
 	for _, p := range placeholders {
 		if strings.Contains(lower, p) {
 			return true

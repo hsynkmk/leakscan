@@ -46,6 +46,9 @@ type Rule struct {
 	// MinEntropy rejects low-randomness matches like "password = aaaaaaaa".
 	// 0 disables the check. Used for generic rules that would otherwise be noisy.
 	MinEntropy float64 `json:"-"`
+	// Context, if set, must also match somewhere on the line. It keeps broad
+	// patterns precise, e.g. "pwd=" only counts inside a connection string.
+	Context *regexp.Regexp `json:"-"`
 }
 
 // DefaultRules returns the built-in rule set. Specific, high-confidence rules
@@ -91,6 +94,24 @@ func DefaultRules() []Rule {
 			Description: "JSON Web Token",
 			Severity:    Medium,
 			Pattern:     regexp.MustCompile(`\b(eyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,})`),
+			SecretGroup: 1,
+		},
+		{
+			// ADO.NET / ODBC / JDBC style: "Server=db;User Id=app;Password=<secret>;".
+			// No entropy gate: database passwords are often weak, which makes them worse, not better.
+			ID:          "connection-string-password",
+			Description: "Password in a database connection string",
+			Severity:    High,
+			Pattern:     regexp.MustCompile(`(?i)\b(?:password|pwd)\s*=\s*([^;"'\s]{4,})`),
+			SecretGroup: 1,
+			Context:     regexp.MustCompile(`(?i)\b(?:server|data source|host|user id|uid|initial catalog|database)\s*=`),
+		},
+		{
+			// e.g. postgres://user:<password>@host, mongodb+srv://..., https://user:<token>@host/...
+			ID:          "url-credentials",
+			Description: "Credentials embedded in a URL",
+			Severity:    High,
+			Pattern:     regexp.MustCompile(`\b[a-zA-Z][a-zA-Z0-9+.-]*://[^\s/:@"']{1,64}:([^\s/:@"']{3,128})@[^\s/"']+`),
 			SecretGroup: 1,
 		},
 		{
